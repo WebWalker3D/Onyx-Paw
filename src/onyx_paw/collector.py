@@ -32,7 +32,8 @@ def _collect_git_repo(path: str) -> list[dict]:
         if ext in _BINARY_EXT or full.stat().st_size > _MAX_SIZE: continue
         try: content = full.read_text(encoding="utf-8", errors="ignore")
         except Exception: continue
-        if "\x00" in content[:1024]: continue
+        content = content.replace("\x00", "")
+        if not content.strip(): continue
         docs.append({"path": rel, "title": full.name, "type": _classify(rel, ext), "content": content, "language": _LANG_MAP.get(ext)})
     return docs
 
@@ -45,6 +46,8 @@ def _collect_directory(path: str) -> list[dict]:
         if ext in _BINARY_EXT or full.stat().st_size > _MAX_SIZE: continue
         try: content = full.read_text(encoding="utf-8", errors="ignore")
         except Exception: continue
+        content = content.replace("\x00", "")
+        if not content.strip(): continue
         rel = str(full.relative_to(root))
         docs.append({"path": rel, "title": full.name, "type": _classify(rel, ext), "content": content, "language": _LANG_MAP.get(ext)})
     return docs
