@@ -50,6 +50,14 @@ prompt_secret() {
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_FILE="$HOME/.onyx-paw.yaml"
 
+pip_install() {
+    pip3 install "$@" --break-system-packages 2>/dev/null || pip3 install "$@"
+}
+
+pip_uninstall() {
+    pip3 uninstall "$@" --break-system-packages 2>/dev/null || pip3 uninstall "$@"
+}
+
 # -------------------------------------------------------------------
 # Detect existing installation
 # -------------------------------------------------------------------
@@ -81,7 +89,7 @@ if command -v onyx-paw &>/dev/null && [ -f "$CONFIG_FILE" ]; then
             1)
                 info "Updating onyx-paw..."
                 if [ -f "$SCRIPT_DIR/pyproject.toml" ] && [ -d "$SCRIPT_DIR/src/onyx_paw" ]; then
-                    pip3 install --quiet --break-system-packages --upgrade "$SCRIPT_DIR"
+                    pip_install --quiet --upgrade "$SCRIPT_DIR"
                     info "Updated to latest version."
                 else
                     fatal "Missing package files. Run from the Onyx-Paw repo directory."
@@ -171,7 +179,7 @@ else:
                     (crontab -l 2>/dev/null | grep -v "onyx-paw run") | crontab - 2>/dev/null || true
 
                     info "Uninstalling onyx-paw package..."
-                    pip3 uninstall -y onyx-paw --break-system-packages 2>/dev/null || true
+                    pip_uninstall -y onyx-paw 2>/dev/null || true
 
                     info "Removing config..."
                     rm -f "$CONFIG_FILE"
@@ -227,7 +235,7 @@ prompt ONYX_PAW_NAME "Name for this Paw agent" "$(hostname)"
 # 1. Install onyx-paw
 # -------------------------------------------------------------------
 info "Installing onyx-paw..."
-pip3 install --quiet --break-system-packages "$SCRIPT_DIR"
+pip_install --quiet "$SCRIPT_DIR"
 
 # Verify
 if ! command -v onyx-paw &>/dev/null; then
