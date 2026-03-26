@@ -219,7 +219,7 @@ if ! command -v pip3 &>/dev/null && ! python3 -m pip --version &>/dev/null 2>&1;
 fi
 
 # Collect config
-prompt ONYX_SERVER "Onyx server URL (e.g. https://www.onyxthedog.com)"
+prompt ONYX_SERVER "Onyx server URL" "https://www.onyxthedog.com"
 prompt_secret ONYX_API_KEY "Onyx API key"
 prompt ONYX_PAW_NAME "Name for this Paw agent" "$(hostname)"
 
