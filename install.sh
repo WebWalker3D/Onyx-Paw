@@ -71,11 +71,12 @@ if command -v onyx-paw &>/dev/null && [ -f "$CONFIG_FILE" ]; then
     echo "    3) Remove a project"
     echo "    4) Push all projects now"
     echo "    5) Reconfigure cron schedule"
-    echo "    6) Exit"
+    echo "    6) Uninstall onyx-paw"
+    echo "    7) Exit"
     echo ""
 
     while true; do
-        read -rp "Choose [1-6]: " choice
+        read -rp "Choose [1-7]: " choice
         case "$choice" in
             1)
                 info "Updating onyx-paw..."
@@ -144,6 +145,35 @@ else:
                 info "Cron updated: every ${cron_hours} hours"
                 ;;
             6)
+                echo ""
+                warn "This will remove onyx-paw, its config, and the cron job."
+                read -rp "Are you sure? (yes/no): " confirm
+                if [ "$confirm" = "yes" ]; then
+                    info "Removing cron job..."
+                    (crontab -l 2>/dev/null | grep -v "onyx-paw run") | crontab - 2>/dev/null || true
+
+                    info "Uninstalling onyx-paw package..."
+                    pip3 uninstall -y onyx-paw --break-system-packages 2>/dev/null || true
+
+                    info "Removing config..."
+                    rm -f "$CONFIG_FILE"
+
+                    echo ""
+                    echo "============================================"
+                    echo "  Onyx Paw has been uninstalled."
+                    echo "============================================"
+                    echo ""
+                    echo "  Note: Projects on the Onyx server are"
+                    echo "  still there. Remove them from the"
+                    echo "  dashboard if needed."
+                    echo ""
+                    echo "============================================"
+                    exit 0
+                else
+                    info "Uninstall cancelled."
+                fi
+                ;;
+            7)
                 exit 0
                 ;;
             *)
