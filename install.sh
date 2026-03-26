@@ -51,11 +51,19 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_FILE="$HOME/.onyx-paw.yaml"
 
 pip_install() {
-    pip3 install "$@" --break-system-packages 2>/dev/null || pip3 install "$@"
+    if pip3 install --help 2>&1 | grep -q break-system-packages; then
+        pip3 install --break-system-packages "$@"
+    else
+        pip3 install "$@"
+    fi
 }
 
 pip_uninstall() {
-    pip3 uninstall "$@" --break-system-packages 2>/dev/null || pip3 uninstall "$@"
+    if pip3 uninstall --help 2>&1 | grep -q break-system-packages; then
+        pip3 uninstall --break-system-packages "$@"
+    else
+        pip3 uninstall "$@"
+    fi
 }
 
 # -------------------------------------------------------------------
