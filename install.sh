@@ -146,9 +146,27 @@ else:
                 ;;
             6)
                 echo ""
-                warn "This will remove onyx-paw, its config, and the cron job."
+                warn "This will unregister this paw from the Onyx server,"
+                warn "delete all its projects/documents, remove the local"
+                warn "config, cron job, and uninstall the package."
                 read -rp "Are you sure? (yes/no): " confirm
                 if [ "$confirm" = "yes" ]; then
+                    # Unregister from Onyx server
+                    PAW_ID=$(python3 -c "import yaml; print(yaml.safe_load(open('$CONFIG_FILE')).get('paw_id',''))" 2>/dev/null || true)
+                    SERVER=$(python3 -c "import yaml; print(yaml.safe_load(open('$CONFIG_FILE')).get('server',''))" 2>/dev/null || true)
+                    API_KEY=$(python3 -c "import yaml; print(yaml.safe_load(open('$CONFIG_FILE')).get('api_key',''))" 2>/dev/null || true)
+
+                    if [ -n "$PAW_ID" ] && [ -n "$SERVER" ] && [ -n "$API_KEY" ]; then
+                        info "Unregistering paw and deleting projects from server..."
+                        if curl -sf -X DELETE "${SERVER}/api/paws/${PAW_ID}" \
+                            -H "Authorization: Bearer ${API_KEY}" >/dev/null 2>&1; then
+                            info "Paw and all projects removed from server."
+                        else
+                            warn "Could not reach server — paw may still be registered."
+                            warn "You can remove it manually from the dashboard."
+                        fi
+                    fi
+
                     info "Removing cron job..."
                     (crontab -l 2>/dev/null | grep -v "onyx-paw run") | crontab - 2>/dev/null || true
 
@@ -161,12 +179,6 @@ else:
                     echo ""
                     echo "============================================"
                     echo "  Onyx Paw has been uninstalled."
-                    echo "============================================"
-                    echo ""
-                    echo "  Note: Projects on the Onyx server are"
-                    echo "  still there. Remove them from the"
-                    echo "  dashboard if needed."
-                    echo ""
                     echo "============================================"
                     exit 0
                 else
