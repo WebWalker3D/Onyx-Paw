@@ -1,0 +1,19 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "onyx-paw"
+version = "0.1.0"
+description = "Remote Onyx Paw — lightweight agent for pushing content to Onyx"
+requires-python = ">=3.10"
+dependencies = ["click>=8.1.0", "httpx>=0.27.0", "pyyaml>=6.0", "gitpython>=3.1.40"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.2.0", "pytest-httpx>=0.30.0"]
+
+[project.scripts]
+onyx-paw = "onyx_paw.cli:cli"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/onyx_paw"]
