@@ -1,14 +1,9 @@
 #!/usr/bin/env bash
 #
-# Onyx Paw — Installation Script
+# Onyx Paw — Installer & Manager
 #
-# Installs the Onyx Paw agent on a remote machine so it can
-# push project content to your central Onyx server.
-#
-# Usage:
-#   git clone https://github.com/WebWalker3D/onyx-paw.git
-#   cd onyx-paw
-#   bash install.sh
+# Fresh install:  git clone https://github.com/WebWalker3D/Onyx-Paw.git && cd Onyx-Paw && bash install.sh
+# Manage:         bash install.sh   (detects existing installation)
 #
 # Environment variables (set before running, or you'll be prompted):
 #   ONYX_SERVER      - Onyx server URL (e.g. https://www.onyxthedog.com)
@@ -52,16 +47,124 @@ prompt_secret() {
     fi
 }
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_FILE="$HOME/.onyx-paw.yaml"
+
 # -------------------------------------------------------------------
-# Preflight
+# Detect existing installation
+# -------------------------------------------------------------------
+if command -v onyx-paw &>/dev/null && [ -f "$CONFIG_FILE" ]; then
+    # ---------------------------------------------------------------
+    # MANAGEMENT MODE
+    # ---------------------------------------------------------------
+    echo ""
+    echo "============================================"
+    echo "  Onyx Paw — already installed"
+    echo "============================================"
+    echo ""
+    onyx-paw status
+    echo ""
+    echo "  What would you like to do?"
+    echo ""
+    echo "    1) Update onyx-paw to latest version"
+    echo "    2) Add a project"
+    echo "    3) Remove a project"
+    echo "    4) Push all projects now"
+    echo "    5) Reconfigure cron schedule"
+    echo "    6) Exit"
+    echo ""
+
+    while true; do
+        read -rp "Choose [1-6]: " choice
+        case "$choice" in
+            1)
+                info "Updating onyx-paw..."
+                if [ -f "$SCRIPT_DIR/pyproject.toml" ] && [ -d "$SCRIPT_DIR/src/onyx_paw" ]; then
+                    pip3 install --quiet --break-system-packages --upgrade "$SCRIPT_DIR"
+                    info "Updated to latest version."
+                else
+                    fatal "Missing package files. Run from the Onyx-Paw repo directory."
+                fi
+                ;;
+            2)
+                read -rp "  Path to project: " proj_path
+                if [ ! -d "$proj_path" ]; then
+                    warn "  Directory not found: $proj_path"
+                    continue
+                fi
+                default_name=$(basename "$proj_path")
+                read -rp "  Project name [$default_name]: " proj_name
+                proj_name="${proj_name:-$default_name}"
+                read -rp "  Type (repo/website/service/database) [repo]: " proj_type
+                proj_type="${proj_type:-repo}"
+                onyx-paw add "$proj_path" --name "$proj_name" --type "$proj_type"
+                info "  Added: $proj_name"
+                ;;
+            3)
+                # List projects with numbers
+                echo ""
+                PROJECTS=$(python3 -c "
+import yaml
+config = yaml.safe_load(open('$CONFIG_FILE'))
+for i, p in enumerate(config.get('projects', [])):
+    print(f\"  {i+1}) {p['name']}  ({p['path']})\")
+if not config.get('projects'):
+    print('  No projects configured.')
+")
+                echo "$PROJECTS"
+                echo ""
+                read -rp "  Project number to remove (or 0 to cancel): " proj_num
+                if [ "$proj_num" != "0" ] && [ -n "$proj_num" ]; then
+                    python3 -c "
+import yaml
+config = yaml.safe_load(open('$CONFIG_FILE'))
+projects = config.get('projects', [])
+idx = int('$proj_num') - 1
+if 0 <= idx < len(projects):
+    removed = projects.pop(idx)
+    with open('$CONFIG_FILE', 'w') as f:
+        yaml.dump(config, f, default_flow_style=False)
+    print(f'  Removed: {removed[\"name\"]}')
+else:
+    print('  Invalid selection.')
+"
+                fi
+                ;;
+            4)
+                info "Pushing projects..."
+                onyx-paw run
+                info "Push complete."
+                ;;
+            5)
+                read -rp "Interval in hours [2]: " cron_hours
+                cron_hours="${cron_hours:-2}"
+                ONYX_PAW_BIN=$(which onyx-paw)
+                CRON_LINE="0 */${cron_hours} * * * ${ONYX_PAW_BIN} run >> /var/log/onyx-paw.log 2>&1"
+                (crontab -l 2>/dev/null | grep -v "onyx-paw run"; echo "$CRON_LINE") | crontab -
+                info "Cron updated: every ${cron_hours} hours"
+                ;;
+            6)
+                exit 0
+                ;;
+            *)
+                warn "Invalid choice."
+                ;;
+        esac
+        echo ""
+        read -rp "Do something else? (y/n): " again
+        [[ "$again" =~ ^[Yy] ]] || break
+    done
+    exit 0
+fi
+
+# -------------------------------------------------------------------
+# FRESH INSTALL MODE
 # -------------------------------------------------------------------
 info "Onyx Paw installation starting..."
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
 # Verify package is present
 if [ ! -f "$SCRIPT_DIR/pyproject.toml" ] || [ ! -d "$SCRIPT_DIR/src/onyx_paw" ]; then
-    fatal "Missing package files. Make sure you're running this from the onyx-paw repo root."
+    fatal "Missing package files. Make sure you're running this from the Onyx-Paw repo root."
 fi
 
 # Check for Python
@@ -195,5 +298,6 @@ echo "  Commands:"
 echo "    onyx-paw status       Show config and registered projects"
 echo "    onyx-paw add <path>   Register a project to index"
 echo "    onyx-paw run          Push all projects to Onyx now"
+echo "    bash install.sh       Manage installation"
 echo ""
 echo "============================================"
