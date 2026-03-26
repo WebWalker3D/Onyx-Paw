@@ -97,7 +97,7 @@ if command -v onyx-paw &>/dev/null && [ -f "$CONFIG_FILE" ]; then
             1)
                 info "Updating onyx-paw..."
                 if [ -f "$SCRIPT_DIR/pyproject.toml" ] && [ -d "$SCRIPT_DIR/src/onyx_paw" ]; then
-                    pip_install --quiet --upgrade "$SCRIPT_DIR"
+                    pip_install --upgrade "$SCRIPT_DIR"
                     info "Updated to latest version."
                 else
                     fatal "Missing package files. Run from the Onyx-Paw repo directory."
@@ -243,7 +243,7 @@ prompt ONYX_PAW_NAME "Name for this Paw agent" "$(hostname)"
 # 1. Install onyx-paw
 # -------------------------------------------------------------------
 info "Installing onyx-paw..."
-pip_install --quiet "$SCRIPT_DIR"
+pip_install "$SCRIPT_DIR"
 
 # Verify
 if ! command -v onyx-paw &>/dev/null; then
